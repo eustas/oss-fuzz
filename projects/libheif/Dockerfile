@@ -16,35 +16,6 @@
 
 FROM gcr.io/oss-fuzz-base/base-builder
 
-
-RUN apt-get update && apt-get install -y \
-    autoconf \
-    automake \
-    build-essential \
-    cmake \
-    libtool \
-    make \
-    mercurial \
-    pkg-config \
-    yasm
-
-RUN git clone \
-    --depth 1 \
-    --branch master \
-    https://github.com/strukturag/libde265.git \
-    libde265
-
-RUN hg clone \
-    --branch stable \
-    http://hg.videolan.org/x265 \
-    x265
-
-RUN git clone \
-    --depth 1 \
-    --branch master \
-    https://aomedia.googlesource.com/aom \
-    aom
-
 RUN git clone \
     --depth 1 \
     --branch master \
@@ -54,6 +25,3 @@ RUN git clone \
 WORKDIR libheif
 
 COPY build.sh $SRC/
-# This is to fix Fuzz Introspector build by using LLVM old pass manager
-# re https://github.com/ossf/fuzz-introspector/issues/305
-ENV OLD_LLVMPASS 1

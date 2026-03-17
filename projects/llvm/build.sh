@@ -36,10 +36,13 @@ else
       llvm-dis-fuzzer \
       llvm-opt-fuzzer \
       llvm-isel-fuzzer \
+      llvm-special-case-list-fuzzer \
       clang-objc-fuzzer \
       clang-format-fuzzer \
-      clang-pseudo-fuzzer \
       clang-fuzzer \
+      llvm-parse-assembly-fuzzer \
+      llvm-symbol-reader-fuzzer \
+      llvm-object-yaml-fuzzer \
     )
   else
     readonly FUZZERS=( \
@@ -54,11 +57,14 @@ else
       llvm-dis-fuzzer \
       llvm-opt-fuzzer \
       llvm-isel-fuzzer \
+      llvm-special-case-list-fuzzer \
       clang-objc-fuzzer \
       clang-format-fuzzer \
-      clang-pseudo-fuzzer \
       clang-fuzzer \
       clangd-fuzzer \
+      llvm-parse-assembly-fuzzer \
+      llvm-symbol-reader-fuzzer \
+      llvm-object-yaml-fuzzer \
     )
   fi
 fi
@@ -67,7 +73,6 @@ readonly CLANG_DICT_FUZZERS=( \
   clang-fuzzer \
   clang-format-fuzzer \
   clang-objc-fuzzer \
-  clang-pseudo-fuzzer \
 )
 
 case $SANITIZER in
@@ -90,6 +95,7 @@ cmake -GNinja -DCMAKE_BUILD_TYPE=Release ../$LLVM \
     -DLLVM_ENABLE_PROJECTS="clang;lld;clang-tools-extra" \
     -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;compiler-rt" \
     -DLLVM_ENABLE_ASSERTIONS=ON \
+    -DLLVM_USE_LINKER=lld \
     -DCMAKE_C_COMPILER="${CC}" \
     -DCMAKE_CXX_COMPILER="${CXX}" \
     -DCMAKE_C_FLAGS="${CFLAGS}" \
@@ -98,7 +104,9 @@ cmake -GNinja -DCMAKE_BUILD_TYPE=Release ../$LLVM \
     -DLLVM_NO_DEAD_STRIP=ON \
     -DLLVM_USE_SANITIZER="${LLVM_SANITIZER}" \
     -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly \
-    -DCOMPILER_RT_INCLUDE_TESTS=OFF
+    -DCOMPILER_RT_INCLUDE_TESTS=OFF \
+    -DLLVM_ENABLE_PCH=OFF \
+    -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
 
 # Patch certain build rules in code coverage mode, as otherwise the process is killed.
 # Verify we can build some of the troublesome rules by building them.
@@ -106,6 +114,7 @@ if [[ "$SANITIZER" = coverage ]]; then
   mv build.ninja ../
   python3 $SRC/coverage_patcher.py ../build.ninja build.ninja
   ninja lib/Target/AMDGPU/Utils/CMakeFiles/LLVMAMDGPUUtils.dir/AMDGPUBaseInfo.cpp.o -j $(( $(nproc) / 2))
+  ninja lib/Target/AMDGPU/MCTargetDesc/CMakeFiles/LLVMAMDGPUDesc.dir/AMDGPUMCCodeEmitter.cpp.o -j $(( $(nproc) / 2))
 fi
 
 for fuzzer in "${FUZZERS[@]}"; do
@@ -116,9 +125,9 @@ for fuzzer in "${FUZZERS[@]}"; do
     # Do not exhaust memory limitations on the cloud machine, coverage
     # takes more resources which causes processes to crash.
     if [[ "$SANITIZER" = coverage ]]; then
-      ninja $fuzzer -j 2 || ninja $fuzzer -j 1
+      ninja $fuzzer -j $(( $(nproc) / 4)) || ninja $fuzzer -j 2 || ninja $fuzzer -j 1
     else
-      ninja $fuzzer -j $(( $(nproc) / 4))
+      ninja $fuzzer -j $(( $(nproc) / 4)) || ninja $fuzzer -j 2 || ninja $fuzzer -j 1
     fi
   fi
   cp bin/$fuzzer $OUT
@@ -130,9 +139,17 @@ if [ -n "${OSS_FUZZ_CI-}" ]; then
   exit 0
 fi
 
+cp $OUT/llvm-isel-fuzzer $OUT/llvm-isel-fuzzer--hexagon-O2
+cp $OUT/llvm-isel-fuzzer $OUT/llvm-isel-fuzzer--riscv64-O2
+cp $OUT/llvm-isel-fuzzer $OUT/llvm-isel-fuzzer--mips64-O2
+cp $OUT/llvm-isel-fuzzer $OUT/llvm-isel-fuzzer--arm-O2
+cp $OUT/llvm-isel-fuzzer $OUT/llvm-isel-fuzzer--ppc64-O2
 cp $OUT/llvm-isel-fuzzer $OUT/llvm-isel-fuzzer--aarch64-O2
 cp $OUT/llvm-isel-fuzzer $OUT/llvm-isel-fuzzer--x86_64-O2
 cp $OUT/llvm-isel-fuzzer $OUT/llvm-isel-fuzzer--wasm32-O2
+cp $OUT/llvm-isel-fuzzer $OUT/llvm-isel-fuzzer--nvptx-O2
+cp $OUT/llvm-isel-fuzzer $OUT/llvm-isel-fuzzer--ve-O2
+cp $OUT/llvm-isel-fuzzer $OUT/llvm-isel-fuzzer--bpf-O2
 mv $OUT/llvm-isel-fuzzer $OUT/llvm-isel-fuzzer--aarch64-gisel
 
 # Same for llvm-opt-fuzzer
@@ -152,17 +169,21 @@ cp $OUT/llvm-opt-fuzzer $OUT/llvm-opt-fuzzer--x86_64-strength_reduce
 
 cp $OUT/llvm-opt-fuzzer $OUT/llvm-opt-fuzzer--x86_64-irce
 
+cp $OUT/llvm-opt-fuzzer $OUT/llvm-opt-fuzzer--x86_64-dse
+cp $OUT/llvm-opt-fuzzer $OUT/llvm-opt-fuzzer--x86_64-loop_idiom
+cp $OUT/llvm-opt-fuzzer $OUT/llvm-opt-fuzzer--x86_64-reassociate
+cp $OUT/llvm-opt-fuzzer $OUT/llvm-opt-fuzzer--x86_64-lower_matrix_intrinsics
+cp $OUT/llvm-opt-fuzzer $OUT/llvm-opt-fuzzer--x86_64-memcpyopt
+cp $OUT/llvm-opt-fuzzer $OUT/llvm-opt-fuzzer--x86_64-sroa
+
 mv $OUT/llvm-opt-fuzzer $OUT/llvm-opt-fuzzer--x86_64-instcombine
 
 
-
-# 10th August 2022: The lines for building the dictionaries
-# broke the whole build. They are left as a reminder to re-enable
-# them once they have been fixed upstream.
-#ninja clang-fuzzer-dictionary
-#for fuzzer in "${CLANG_DICT_FUZZERS[@]}"; do
-#  bin/clang-fuzzer-dictionary > $OUT/$fuzzer.dict
-#done
+ninja clang-fuzzer-dictionary
+for fuzzer in "${CLANG_DICT_FUZZERS[@]}"; do
+  bin/clang-fuzzer-dictionary > $OUT/$fuzzer.dict
+done
 
 zip -j "${OUT}/clang-objc-fuzzer_seed_corpus.zip"  $SRC/$LLVM/../clang/tools/clang-fuzzer/corpus_examples/objc/*
 zip -j "${OUT}/clangd-fuzzer_seed_corpus.zip"  $SRC/$LLVM/../clang-tools-extra/clangd/test/*
+zip -j "${OUT}/clang-fuzzer_seed_corpus.zip" $SRC/llvm-project/clang/test/Parser/*.cpp

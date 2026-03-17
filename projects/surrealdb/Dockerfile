@@ -14,12 +14,12 @@
 #
 ################################################################################
 
-FROM gcr.io/oss-fuzz-base/base-builder-rust
+FROM gcr.io/oss-fuzz-base/base-builder-rust:ubuntu-24-04
 RUN git clone --depth 1 https://github.com/surrealdb/surrealdb surrealdb
-RUN git clone --depth 1 https://github.com/surrealdb/www.surrealdb.com.git surrealdb_website
+RUN git clone --depth 1 https://github.com/surrealdb/docs.surrealdb.com.git surrealdb_website
 WORKDIR surrealdb
-# TODO(surrealdb/surrealdb#1873): Remove `RUN rustup.*` lines once 
-# rust-lang/rust#110475 is fixed.
-RUN rustup install nightly-2023-04-21
-RUN rustup default nightly-2023-04-21
+RUN rustup toolchain install nightly-2025-12-01 && rustup default nightly-2025-12-01
+ENV RUSTUP_TOOLCHAIN=nightly-2025-12-01
+# needed for MSAN and coverage build
+RUN rustup component add rust-src
 COPY build.sh $SRC/

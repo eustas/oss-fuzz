@@ -13,13 +13,14 @@
 // limitations under the License.
 //
 ///////////////////////////////////////////////////////////////////////////
+
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.dataformat.ion.IonFactory;
-import com.fasterxml.jackson.dataformat.ion.IonFactoryBuilder;
-import com.fasterxml.jackson.dataformat.ion.IonObjectMapper;
-import com.fasterxml.jackson.dataformat.ion.IonParser;
-import java.io.IOException;
+import tools.jackson.core.JsonParser;
+import tools.jackson.dataformat.ion.IonFactory;
+import tools.jackson.dataformat.ion.IonFactoryBuilder;
+import tools.jackson.dataformat.ion.IonObjectMapper;
+import tools.jackson.dataformat.ion.IonReadFeature;
+
 import java.util.EnumSet;
 
 /** This fuzzer targets the methods of IonParser */
@@ -28,8 +29,8 @@ public class IonParserFuzzer {
     try {
       int[] choices = data.consumeInts(data.consumeInt(1, 100));
 
-      // Retrieve set of IonParser.Feature
-      EnumSet<IonParser.Feature> featureSet = EnumSet.allOf(IonParser.Feature.class);
+      // Retrieve set of IonReadFeature
+      EnumSet<IonReadFeature> featureSet = EnumSet.allOf(IonReadFeature.class);
 
       // Create and configure IonObjectMapper
       IonFactoryBuilder ionFactoryBuilder;
@@ -55,11 +56,11 @@ public class IonParserFuzzer {
       if ((byteArray == null) || (byteArray.length <= 0)) {
         return;
       }
-      JsonParser parser = ((IonObjectMapper) mapper).getFactory().createParser(byteArray);
+      JsonParser parser = ((IonObjectMapper) mapper).tokenStreamFactory().createParser(byteArray);
 
       // Fuzz methods of IonParser
       for (Integer choice : choices) {
-        switch (choice % 19) {
+        switch (Math.abs(choice) % 19) {
           case 1:
             parser.currentName();
             break;
@@ -79,7 +80,7 @@ public class IonParserFuzzer {
             parser.nextToken();
             break;
           case 7:
-            parser.nextTextValue();
+            parser.nextStringValue();
             break;
           case 8:
             parser.getText();
@@ -121,7 +122,7 @@ public class IonParserFuzzer {
       }
 
       parser.close();
-    } catch (IOException | IllegalArgumentException | IllegalStateException e) {
+    } catch (RuntimeException e) {
       // Known exception
     }
   }

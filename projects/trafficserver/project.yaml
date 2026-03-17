@@ -9,6 +9,7 @@ auto_ccs:
   - "bcall@apache.org"
   - "lhedstrom@gmail.com"
   - "brian.neradt@gmail.com"
+  - "masaori@apache.org"
 fuzzing_engines:
   - libfuzzer
   - afl
@@ -18,3 +19,4 @@ sanitizers:
   - memory
   - undefined
 main_repo: 'https://github.com/apache/trafficserver'
+base_os_version: ubuntu-24-04

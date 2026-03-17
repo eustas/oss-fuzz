@@ -1,3 +1,4 @@
+base_os_version: ubuntu-24-04
 auto_ccs:
 - paul.l.kehrer@gmail.com
 fuzzing_engines:
@@ -12,5 +13,3 @@ vendor_ccs:
 - david@adalogics.com
 - adam@adalogics.com
 - arthur.chan@adalogics.com
-- riccardo.schirone@trailofbits.com
-- facundo.tuesca@trailofbits.com

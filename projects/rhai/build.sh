@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 ################################################################################
-cargo fuzz build -O --debug-assertions
+cargo +nightly fuzz build -O --debug-assertions
 
 FUZZ_TARGET_OUTPUT_DIR=fuzz/target/x86_64-unknown-linux-gnu/release
 for f in fuzz/fuzz_targets/*.rs
@@ -24,3 +24,4 @@ do
 done
 
 find . -name '*.rhai' -exec zip $OUT/scripting_seed_corpus.zip {} \;
+cp $OUT/scripting_seed_corpus.zip $OUT/ast_seed_corpus.zip

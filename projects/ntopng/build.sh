@@ -22,7 +22,8 @@ unset CFLAGS
 unset CXXFLAGS
 export AFL_NOOPT=1
 # This is needed because oss-fuzz always uses it
-export CXXFLAGS="-stdlib=libc++"
+export CFLAGS="-Wno-error=unused-command-line-argument"
+export CXXFLAGS="-stdlib=libc++ -Wno-error=unused-command-line-argument"
 
 ### Dependencies that need static linking ###
 
@@ -33,14 +34,17 @@ make -j$(nproc)
 make install
 
 # zeromq
-cd $SRC/zeromq-4.3.4
+cd $SRC/zeromq-4.3.5
 ./autogen.sh
+(
+export CXXFLAGS="-Wno-error=missing-braces -Wno-error=unused-command-line-argument -stdlib=libc++"
 ./configure --without-documentation --without-libsodium --enable-static --disable-shared
 make -j$(nproc)
 make install
+)
 
 # json-c
-cd $SRC/json-c-json-c-0.16-20220414
+cd $SRC/json-c-json-c-0.17-20230812
 mkdir build
 cd build
 cmake -DBUILD_SHARED_LIBS=OFF ..
@@ -59,10 +63,11 @@ make install
 # Build nDPI
 cd $NDPI_HOME
 ./autogen.sh
+./configure
 make -j$(nproc)
 
 # Build LUA
-make -C $NTOPNG_HOME/third-party/lua-5.4.3 generic
+make -C $NTOPNG_HOME/third-party/lua-5.4.6 generic
 
 # Build librrdtool
 cd $NTOPNG_HOME/third-party/rrdtool-1.4.8

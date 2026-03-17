@@ -1,3 +1,4 @@
+base_os_version: ubuntu-24-04
 fuzzing_engines:
 - libfuzzer
 homepage: https://github.com/bmc/digest
@@ -9,5 +10,3 @@ sanitizers:
 vendor_ccs:
 - david@adalogics.com
 - adam@adalogics.com
-- riccardo.schirone@trailofbits.com
-- facundo.tuesca@trailofbits.com

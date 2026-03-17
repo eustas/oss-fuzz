@@ -14,4 +14,7 @@ fuzzing_engines:
   - honggfuzz
 sanitizers:
   - address
-main_repo: 'https://github.com/apache/incubator-brpc'
+  - undefined
+main_repo: "https://github.com/apache/incubator-brpc"
+
+base_os_version: ubuntu-24-04

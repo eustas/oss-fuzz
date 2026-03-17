@@ -15,7 +15,7 @@
 #
 ################################################################################
 
-FROM gcr.io/oss-fuzz-base/base-builder-jvm
+FROM gcr.io/oss-fuzz-base/base-builder-jvm:ubuntu-24-04
 RUN apt-get update && apt-get install -y maven
 
 RUN git clone --depth 1 https://github.com/google/fuzzing
@@ -26,11 +26,10 @@ RUN git clone --depth 1 https://github.com/dvyukov/go-fuzz-corpus && \
     zip -j $SRC/JsonFuzzer_seed_corpus.zip go-fuzz-corpus/json/corpus/* && \
     zip -j $SRC/DataInputFuzzer_seed_corpus.zip go-fuzz-corpus/json/corpus/*
 
-ENV JACKSON_BRANCH=2.15
 
-RUN git clone --depth 1 --branch=$JACKSON_BRANCH https://github.com/FasterXML/jackson-core
-RUN git clone --depth 1 --branch=$JACKSON_BRANCH https://github.com/FasterXML/jackson-databind
-RUN git clone --depth 1 --branch=$JACKSON_BRANCH https://github.com/FasterXML/jackson-annotations
+RUN git clone --depth 1 https://github.com/FasterXML/jackson-core
+RUN git clone --depth 1 https://github.com/FasterXML/jackson-databind
+RUN git clone --depth 1 https://github.com/FasterXML/jackson-annotations
 
 COPY build.sh $SRC/
 COPY *Fuzzer.java $SRC/

@@ -14,9 +14,7 @@
 #
 ################################################################################
 
-FROM gcr.io/oss-fuzz-base/base-builder
-RUN apt-get update && \
-    apt-get install -y autoconf gettext libtool m4 automake pkg-config libexpat-dev libexpat-dev:i386
+FROM gcr.io/oss-fuzz-base/base-builder:ubuntu-24-04
 RUN git clone --depth 1 https://github.com/avahi/avahi
 WORKDIR avahi
 COPY build.sh $SRC/

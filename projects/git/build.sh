@@ -15,37 +15,49 @@
 #
 ################################################################################
 
+# build zlib
+pushd "$SRC/zlib"
+./configure --static --prefix="$WORK"
+make -j$(nproc) CFLAGS="$CFLAGS -fPIC"
+make install
+popd
+export ZLIB_PATH=$WORK
+
 # Enable a timeout for lockfiles rather than exit immediately. This is to
 # overcome in case multiple processes try to lock a file around the same
 # time. 
 sed -i 's/hold_lock_file_for_update_timeout(lk, path, flags, 0);/hold_lock_file_for_update_timeout(lk, path, flags, 5000);/g' lockfile.h
 
+# Override GITLIBS to exclude common-main.o. The fuzzing engine (libFuzzer or AFL)
+# provides its own main() that calls LLVMFuzzerTestOneInput().
+# For AFL, we also need --whole-archive to force include the AFL driver's main().
+if [ "${FUZZING_ENGINE:-}" = "afl" ]; then
+  FUZZING_ENGINE_FLAGS="-Wl,--whole-archive $LIB_FUZZING_ENGINE -Wl,--no-whole-archive"
+else
+  FUZZING_ENGINE_FLAGS="$LIB_FUZZING_ENGINE"
+fi
+
 # build fuzzers
 make -j$(nproc) CC=$CC CXX=$CXX CFLAGS="$CFLAGS" \
-  FUZZ_CXXFLAGS="$CXXFLAGS -Wl,--allow-multiple-definition" \
-  LIB_FUZZING_ENGINE="common-main.o $LIB_FUZZING_ENGINE" fuzz-all
+  FUZZ_CXXFLAGS="$CXXFLAGS" \
+  LIB_FUZZING_ENGINE="$FUZZING_ENGINE_FLAGS" \
+  GITLIBS=libgit.a fuzz-all
 
-FUZZERS="fuzz-pack-headers fuzz-pack-idx fuzz-commit-graph"
-#FUZZERS="$FUZZERS fuzz-cmd-status fuzz-cmd-diff fuzz-cmd-version"
-#FUZZERS="$FUZZERS fuzz-command"
-FUZZERS="$FUZZERS fuzz-cmd-diff"
+FUZZERS=""
+FUZZERS="$FUZZERS fuzz-commit-graph"
+FUZZERS="$FUZZERS fuzz-config"
+FUZZERS="$FUZZERS fuzz-credential-from-url-gently"
+FUZZERS="$FUZZERS fuzz-date"
+FUZZERS="$FUZZERS fuzz-pack-headers"
+FUZZERS="$FUZZERS fuzz-pack-idx"
+FUZZERS="$FUZZERS fuzz-parse-attr-line"
+FUZZERS="$FUZZERS fuzz-url-decode-mem"
+
 # copy fuzzers
 for fuzzer in $FUZZERS ; do
   cp oss-fuzz/$fuzzer $OUT
 done
 
-# build corpora from Git's own packfiles
-zip -j $OUT/fuzz-pack-idx_seed_corpus.zip .git/objects/pack/*.idx
-for packfile in .git/objects/pack/*.pack ; do
-  dd ibs=1 skip=12 if=$packfile of=$packfile.trimmed
-done
-zip -j $OUT/fuzz-pack-headers_seed_corpus.zip .git/objects/pack/*.pack.trimmed
-
-# build commit-graph corpus
-ASAN_OPTIONS=detect_leaks=0 ./git commit-graph write
-zip -j $OUT/fuzz-commit-graph_seed_corpus .git/objects/info/commit-graph
-
-# Mute stderr
 for fuzzer in $FUZZERS ; do
   cat >$OUT/$fuzzer.options << EOF
 [libfuzzer]
@@ -53,6 +65,3 @@ detect_leaks = 0
 EOF
 done
 
-# Generate existing file for temp git repository
-echo "TEMP1TEMP1TEMP1TEMP1" > $OUT/TEMP_1
-echo "TEMP2TEMP2TEMP2TEMP2" > $OUT/TEMP_2

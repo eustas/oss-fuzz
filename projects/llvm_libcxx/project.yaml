@@ -1,3 +1,4 @@
+base_os_version: ubuntu-24-04
 homepage: "https://libcxx.llvm.org/"
 language: c++
 primary_contact: "mclow.lists@gmail.com"
@@ -8,7 +9,9 @@ auto_ccs:
   - "bigcheesegs@gmail.com"
   - "eric@efcs.ca"
   - "ldionne.2@gmail.com"
-
+  - "koraq@xs4all.nl"
+  - "nikolasklauser@berlin.de"
+  
 fuzzing_engines:
   - afl
   - honggfuzz
